@@ -1,28 +1,39 @@
 extern crate csv;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 
 use std::env;
 use std::error::Error;
 use std::io;
 use std::process;
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct Record {
+    city: String,
+    state: String,
+    population: Option<u64>,
+    latitude: f64,
+    longitude: f64,
+}
+
 fn run() -> Result<(), Box<dyn Error>> {
-    let query = match env::args().nth(1) {
+    let minimum_pop: u64 = match env::args().nth(1) {
         None => return Err(From::from("expected 1 argument, but got none")),
-        Some(query) => query,
+        Some(arg) => arg.parse()?,
     };
 
     let mut rdr = csv::Reader::from_reader(io::stdin());
     let mut wtr = csv::Writer::from_writer(io::stdout());
 
-    wtr.write_record(rdr.byte_headers()?)?;
+    for result in rdr.deserialize() {
+        let record: Record = result?;
 
-    for result in rdr.byte_records() {
-        let record = result?;
-        if record.iter().any(|field| field == query.as_bytes()) {
-            wtr.write_record(&record)?;
+        if record.population.map_or(false, |pop| pop >= minimum_pop) {
+            wtr.serialize(record)?;
         }
     }
-
     wtr.flush()?;
     Ok(())
 }
