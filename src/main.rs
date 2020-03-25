@@ -14,11 +14,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_reader(io::stdin());
     let mut wtr = csv::Writer::from_writer(io::stdout());
 
-    wtr.write_record(rdr.headers()?)?;
+    wtr.write_record(rdr.byte_headers()?)?;
 
-    for result in rdr.records() {
+    for result in rdr.byte_records() {
         let record = result?;
-        if record.iter().any(|field| field == &query) {
+        if record.iter().any(|field| field == query.as_bytes()) {
             wtr.write_record(&record)?;
         }
     }
